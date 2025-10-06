@@ -36,6 +36,18 @@ cd /home/konsorted/dev/dev-fund-trakt-manager
 dotnet run --project src/DevFund.TraktManager.Presentation.Cli -- --start=2024-01-01 --days=7
 ```
 
+### Device authentication walkthrough
+
+The CLI implements Trakt's [device authorization flow](https://trakt.docs.apiary.io/#reference/authentication-devices) so you can pair the tool without embedding credentials:
+
+1. **Check existing tokens** — if `AccessToken` (and optionally `RefreshToken`) are present in `appsettings.json`, they're used immediately. Leave them blank to trigger a fresh pairing.
+2. **Generate a device code** — the app displays a `user_code` and `verification_url`. Keep the CLI window open during this step.
+3. **Authorize in a browser** — open the verification URL, sign in to Trakt, and enter the code exactly as shown. Trakt confirms when the device is linked.
+4. **Wait for confirmation** — the CLI polls Trakt at the required interval. You'll see a success message once an access token is issued (or an error if the request is denied or expires).
+5. **Token persistence** — the new token is cached in-memory for the lifetime of the process. To reuse it across runs, copy the values back into `appsettings.json` or plug in your own secure store via `ITraktAccessTokenStore`.
+
+If you cancel the flow (Ctrl+C) before authorization completes, simply rerun the CLI to request a new code.
+
 ## Debugging the CLI presenter
 
 - From VS Code, open the command palette and run **.NET: Generate Assets for Build and Debug** to create the default `.vscode/launch.json`.
