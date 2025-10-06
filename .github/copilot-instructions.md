@@ -1,22 +1,36 @@
 # Copilot Instructions
 
-## Project snapshot
-- Single .NET 8 console app defined by `dev-fund-trakt-manager.csproj`; output type is `Exe` with implicit usings and nullable reference types enabled.
-- Entry point lives in `Program.cs` using top-level statements; prefer extending this file or factoring logic into new classes under the `dev_fund_trakt_manager` namespace.
-- Build artifacts land in `bin/Debug/net8.0/`; avoid committing generated files under `bin/` or `obj/`.
+## Quick orientation
+- Start with `.github/instructions/architecture.instructions.md` for the full clean-architecture map (projects, dependencies, tests).
+- `.github/instructions/trakt-api.instructions.md` mirrors `spec/trakt.apib` and is the canonical contract for infrastructure code hitting Trakt.
+
+## Solution layout (see architecture doc for detail)
+- `src/DevFund.TraktManager.Domain` — entities/value objects (`Show`, `Episode`, `CalendarEntry`, `TraktIds`).
+- `src/DevFund.TraktManager.Application` — use cases (`CalendarService`, `CalendarOrchestrator`), contracts, and ports (`ITraktCalendarClient`, `ICalendarPresenter`).
+- `src/DevFund.TraktManager.Infrastructure` — HTTP implementers (`TraktCalendarClient`), DTOs, and DI wiring aligned with the Trakt API.
+- `src/DevFund.TraktManager.Presentation.Cli` — console host/bootstrap plus `ConsoleCalendarPresenter` as the default presenter.
+- Matching `tests/*` projects ensure every layer has coverage; keep parity when adding artifacts.
 
 ## Core workflows
-- Restore/build locally with:
+- Restore/build/test from the repo root:
   ```bash
   dotnet restore
   dotnet build
-  dotnet run --project dev-fund-trakt-manager.csproj
+  dotnet test
   ```
-- Tests are not yet present; if you add them, create a sibling `*.Tests` project and wire it into the solution so `dotnet test` passes.
-- Update NuGet dependencies through `dotnet add package <name>`; ensure versions remain compatible with `net8.0`.
+- Run the CLI presenter after configuring `src/DevFund.TraktManager.Presentation.Cli/appsettings.json` with real Trakt credentials:
+  ```bash
+  dotnet run --project src/DevFund.TraktManager.Presentation.Cli -- --start=2024-01-01 --days=7
+  ```
+- New packages go through `dotnet add <project> package <name>`; never edit `*.csproj` manually when a CLI command exists.
 
 ## Conventions & patterns
-- Stick to C# 12 features available in .NET 8; keep the current top-level program style unless refactoring into a full `Main` improves clarity.
-- Add new `.cs` files next to `Program.cs` (or in subfolders you create) and align namespaces with the default `dev_fund_trakt_manager` root.
-- Keep `Program.cs` focused on wiring and invoke surrounding classes for substantive logic to keep the entry point readable.
-- Document any Trakt-specific endpoints or workflows inline when you add them, since no reference implementation exists yet.
+- Respect dependency flow (Presentation → Infrastructure → Application → Domain). Never reference outward.
+- Register services via the provided extension methods: `AddApplicationLayer` and `AddInfrastructureLayer`.
+- Infrastructure adapters must read headers/endpoints from the Trakt instructions file; document new endpoints there when added.
+- Prefer constructor injection, cancellation tokens, and async flows. Avoid static state.
+
+## When expanding features
+- Start with Domain abstractions, follow with Application ports/contracts, then implement Infrastructure or additional Presenters.
+- Add/extend the sibling test project the moment you create a new class in any layer.
+- Update this document plus the architecture instructions whenever the structure or workflows change so downstream agents stay in sync.
