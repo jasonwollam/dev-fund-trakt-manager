@@ -51,7 +51,9 @@ public sealed class DeviceAuthenticationService
                 continue;
             }
 
-            switch (result.Error)
+            var normalizedError = result.Error.Trim().ToLowerInvariant();
+
+            switch (normalizedError)
             {
                 case "authorization_pending":
                     // continue polling at the same interval
@@ -63,6 +65,10 @@ public sealed class DeviceAuthenticationService
                     throw new InvalidOperationException("The user declined the Trakt authorization request.");
                 case "expired_token":
                     throw new TimeoutException("The device code expired before authorization was granted.");
+                case "invalid_client":
+                    throw new InvalidOperationException("The configured Trakt client credentials were rejected. Double-check your ClientId and ClientSecret.");
+                case "invalid_grant":
+                    throw new InvalidOperationException("The device code is no longer valid. Request a new code and try again.");
                 default:
                     throw new InvalidOperationException($"Unexpected device authentication error '{result.Error}'.");
             }

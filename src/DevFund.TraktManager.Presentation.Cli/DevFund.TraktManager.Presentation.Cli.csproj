@@ -14,6 +14,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="appsettings.Local.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../DevFund.TraktManager.Application/DevFund.TraktManager.Application.csproj" />
     <ProjectReference Include="../DevFund.TraktManager.Infrastructure/DevFund.TraktManager.Infrastructure.csproj" />
   </ItemGroup>

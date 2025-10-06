@@ -57,6 +57,40 @@ public class DeviceAuthenticationServiceTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.WaitForAuthorizationAsync(deviceCode));
     }
 
+    [Fact]
+    public async Task WaitForAuthorizationAsync_ThrowsWhenClientCredentialsRejected()
+    {
+        var deviceCode = new DeviceCodeResponse("device", "user", new Uri("https://example.com"), TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10));
+        var polls = new List<DeviceTokenPollResult>
+        {
+            new(null, "INVALID_CLIENT")
+        };
+
+        var client = new StubDeviceAuthClient(deviceCode, polls);
+        var store = new RecordingTokenStore();
+        var service = new DeviceAuthenticationService(client, store);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => service.WaitForAuthorizationAsync(deviceCode));
+        Assert.Contains("credentials", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task WaitForAuthorizationAsync_ThrowsWhenDeviceCodeInvalid()
+    {
+        var deviceCode = new DeviceCodeResponse("device", "user", new Uri("https://example.com"), TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10));
+        var polls = new List<DeviceTokenPollResult>
+        {
+            new(null, "invalid_grant")
+        };
+
+        var client = new StubDeviceAuthClient(deviceCode, polls);
+        var store = new RecordingTokenStore();
+        var service = new DeviceAuthenticationService(client, store);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => service.WaitForAuthorizationAsync(deviceCode));
+        Assert.Contains("device code", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed class StubDeviceAuthClient : ITraktDeviceAuthClient
     {
         private readonly DeviceCodeResponse _codeResponse;

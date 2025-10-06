@@ -1,5 +1,7 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Linq;
 using DevFund.TraktManager.Application.Abstractions;
 using DevFund.TraktManager.Application.Contracts;
 using DevFund.TraktManager.Infrastructure.Dtos;
@@ -84,17 +86,32 @@ internal sealed class TraktDeviceAuthClient : ITraktDeviceAuthClient
             return new DeviceTokenPollResult(token, null);
         }
 
-        DeviceTokenErrorDto? errorDto = null;
+        string? error = null;
+        string? rawContent = null;
+
         try
         {
-            errorDto = await response.Content.ReadFromJsonAsync<DeviceTokenErrorDto>(SerializerOptions, cancellationToken).ConfigureAwait(false);
+            rawContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+            if (!string.IsNullOrWhiteSpace(rawContent))
+            {
+                var dto = JsonSerializer.Deserialize<DeviceTokenErrorDto>(rawContent, SerializerOptions);
+                if (!string.IsNullOrWhiteSpace(dto?.Error))
+                {
+                    error = dto!.Error;
+                }
+            }
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogDebug(ex, "Failed to parse device token error response as JSON (StatusCode: {StatusCode}). Raw content: {Content}", response.StatusCode, rawContent);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to parse device token error response (StatusCode: {StatusCode}).", response.StatusCode);
+            _logger.LogWarning(ex, "Failed to read device token error response (StatusCode: {StatusCode}).", response.StatusCode);
         }
 
-        var error = errorDto?.Error ?? response.StatusCode.ToString();
+        error = NormalizeError(error, rawContent, response.StatusCode);
         return new DeviceTokenPollResult(null, error);
     }
 
@@ -109,5 +126,36 @@ internal sealed class TraktDeviceAuthClient : ITraktDeviceAuthClient
         {
             throw new InvalidOperationException("Trakt:ClientSecret must be configured for device authentication.");
         }
+    }
+
+    private static string NormalizeError(string? parsedError, string? rawContent, HttpStatusCode statusCode)
+    {
+        if (!string.IsNullOrWhiteSpace(parsedError))
+        {
+            return parsedError.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(rawContent))
+        {
+            var trimmed = rawContent.Trim().Trim('\"', '\'');
+            if (!string.IsNullOrWhiteSpace(trimmed))
+            {
+                var token = trimmed.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(line => line.Trim())
+                    .FirstOrDefault(static line => !string.IsNullOrWhiteSpace(line));
+
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    return token;
+                }
+            }
+        }
+
+        return statusCode switch
+        {
+            HttpStatusCode.BadRequest => "authorization_pending",
+            HttpStatusCode.TooManyRequests => "slow_down",
+            _ => statusCode.ToString(),
+        };
     }
 }

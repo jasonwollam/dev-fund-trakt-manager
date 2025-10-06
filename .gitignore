@@ -5,6 +5,7 @@
 
 # dotenv files
 .env
+src/DevFund.TraktManager.Presentation.Cli/appsettings.Local.json
 
 # User-specific files
 *.rsuser

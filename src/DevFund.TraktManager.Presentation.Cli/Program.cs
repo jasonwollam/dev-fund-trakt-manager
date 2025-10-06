@@ -1,14 +1,21 @@
-﻿using DevFund.TraktManager.Application.Abstractions;
+﻿using System.IO;
+using DevFund.TraktManager.Application.Abstractions;
 using DevFund.TraktManager.Application.Contracts;
 using DevFund.TraktManager.Application.DependencyInjection;
 using DevFund.TraktManager.Application.Services;
 using DevFund.TraktManager.Infrastructure.DependencyInjection;
 using DevFund.TraktManager.Presentation.Cli.Presentation;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Spectre.Console;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+var configurationBasePath = AppContext.BaseDirectory;
+builder.Configuration
+    .AddJsonFile(Path.Combine(configurationBasePath, "appsettings.json"), optional: true, reloadOnChange: true)
+    .AddJsonFile(Path.Combine(configurationBasePath, "appsettings.Local.json"), optional: true, reloadOnChange: true);
 
 builder.Services
     .AddApplicationLayer()
