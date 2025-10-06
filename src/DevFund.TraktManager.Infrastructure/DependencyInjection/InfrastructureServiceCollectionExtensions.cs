@@ -62,6 +62,32 @@ public static class InfrastructureServiceCollectionExtensions
             }
         });
 
+        services.AddHttpClient<ITraktWatchlistClient, TraktWatchlistClient>((serviceProvider, client) =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<TraktOptions>>().Value;
+
+            if (!Uri.TryCreate(options.BaseAddress, UriKind.Absolute, out var baseAddress))
+            {
+                baseAddress = new Uri("https://api.trakt.tv", UriKind.Absolute);
+            }
+
+            client.BaseAddress = baseAddress;
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.TryAddWithoutValidation("trakt-api-version", "2");
+
+            if (string.IsNullOrWhiteSpace(options.ClientId))
+            {
+                throw new InvalidOperationException("Trakt:ClientId must be configured.");
+            }
+
+            client.DefaultRequestHeaders.TryAddWithoutValidation("trakt-api-key", options.ClientId);
+
+            if (!client.DefaultRequestHeaders.UserAgent.Any())
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("DevFund-TraktManager/1.0");
+            }
+        });
+
         return services;
     }
 }

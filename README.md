@@ -29,11 +29,64 @@ dotnet test
 ## Running the CLI presenter
 
 1. Update `src/DevFund.TraktManager.Presentation.Cli/appsettings.json` with valid Trakt credentials.
-2. Execute the CLI with optional filters. When no valid access token is present, you'll receive a pairing code and verification URL to authorize the device before the calendar is fetched:
+2. Execute the CLI with optional filters. When no valid access token is present, you'll receive a pairing code and verification URL to authorize the device before the requested data is fetched:
 
 ```bash
 cd /home/konsorted/dev/dev-fund-trakt-manager
 dotnet run --project src/DevFund.TraktManager.Presentation.Cli -- --start=2024-01-01 --days=7
+```
+
+### CLI modes & arguments
+
+The CLI supports multiple modes selected through the `--mode` flag (defaults to `calendar`).
+
+| Mode | Description | Core switches |
+| --- | --- | --- |
+| `calendar` | Shows upcoming episodes for your account. | `--start=yyyy-MM-dd`, `--days=N` |
+| `watchlist` | Lists the items in your Trakt watchlist. | `--watchlist-type=all\|movies\|shows\|seasons\|episodes`, `--watchlist-sort=rank\|added\|...`, `--watchlist-order=asc\|desc` |
+
+Example watchlist command:
+
+```bash
+dotnet run --project src/DevFund.TraktManager.Presentation.Cli -- \
+	--mode=watchlist \
+	--watchlist-type=shows \
+	--watchlist-sort=added \
+	--watchlist-order=desc
+```
+
+All watchlist options map directly to Trakt's [`/sync/watchlist/{type}/{sort_by}/{sort_how}`](spec/trakt.apib) endpoint, so refer to the API blueprint for the full list of supported values.
+
+### Sample Trakt watchlist request
+
+```http
+GET /sync/watchlist/shows/added/desc HTTP/1.1
+Host: api.trakt.tv
+Content-Type: application/json
+trakt-api-version: 2
+trakt-api-key: <your-client-id>
+Authorization: Bearer <your-access-token>
+User-Agent: DevFund-Trakt-Manager/1.0
+```
+
+This request retrieves the authenticated user's show watchlist sorted by the most recently added items in descending order. Substitute the path segments to target other collection types or ordering strategies.
+
+### Verifying a successful watchlist run
+
+1. Execute the CLI using the watchlist mode command above. The tool will reuse any stored access token or, if needed, guide you through the Trakt device pairing flow before continuing.
+2. When the request succeeds, the console renders a Spectre table labelled **Watchlist**. If no items match your filters, you'll instead see the message `No watchlist items returned for the selected criteria.`
+3. Confirm that each row includes the rank, media type, item title, and the timestamp (local time) when it was added. Notes are shown only when Trakt returns non-empty text.
+
+Example successful output (abbreviated):
+
+```
+ Watchlist
+ ┌──────┬───────┬───────────────────────────────┬─────────────────┬───────┐
+ │ Rank │ Type  │ Item                          │ Listed At       │ Notes │
+ ├──────┼───────┼───────────────────────────────┼─────────────────┼───────┤
+ │ 1    │ Show  │ Slow Horses · Season 3        │ 2025-09-12 18:04 │       │
+ │ 2    │ Movie │ Dune: Part Two (2024)         │ 2025-08-22 21:17 │ IMAX  │
+ └──────┴───────┴───────────────────────────────┴─────────────────┴───────┘
 ```
 
 ### Device authentication walkthrough
