@@ -9,6 +9,7 @@ public static class ApplicationServiceCollectionExtensions
     {
         services.AddScoped<CalendarService>();
         services.AddScoped<CalendarOrchestrator>();
+        services.AddScoped<DeviceAuthenticationService>();
         return services;
     }
 }

@@ -29,13 +29,56 @@ Console.CancelKeyPress += (_, eventArgs) =>
 
 await host.StartAsync(cts.Token);
 
+using var scope = host.Services.CreateScope();
+var serviceProvider = scope.ServiceProvider;
+var console = serviceProvider.GetRequiredService<IAnsiConsole>();
+
 try
 {
     var (startDate, days) = ParseArguments(args);
     var request = new CalendarRequest(startDate, days);
 
-    using var scope = host.Services.CreateScope();
-    var orchestrator = scope.ServiceProvider.GetRequiredService<CalendarOrchestrator>();
+    var tokenStore = serviceProvider.GetRequiredService<ITraktAccessTokenStore>();
+    var existingToken = await tokenStore.GetTokenAsync(cts.Token);
+
+    if (existingToken is null || string.IsNullOrWhiteSpace(existingToken.AccessToken))
+    {
+        var authService = serviceProvider.GetRequiredService<DeviceAuthenticationService>();
+        console.MarkupLine("[yellow]Authorize this device with your Trakt account to continue.[/]");
+
+        DeviceCodeResponse deviceCode;
+        try
+        {
+            deviceCode = await authService.RequestDeviceCodeAsync(cts.Token);
+        }
+        catch (Exception ex)
+        {
+            console.MarkupLine($"[red]Failed to request device code: {Markup.Escape(ex.Message)}[/]");
+            return;
+        }
+
+        console.MarkupLine($"Open [blue]{Markup.Escape(deviceCode.VerificationUri.ToString())}[/] in a browser.");
+        console.MarkupLine($"Enter code: [bold]{Markup.Escape(deviceCode.UserCode)}[/]");
+        console.MarkupLine($"Waiting for authorization (expires in {deviceCode.ExpiresIn.TotalMinutes:F1} minutes)...");
+
+        try
+        {
+            await authService.WaitForAuthorizationAsync(deviceCode, cts.Token);
+            console.MarkupLine("[green]Authorization successful.[/]");
+        }
+        catch (InvalidOperationException ex)
+        {
+            console.MarkupLine($"[red]{Markup.Escape(ex.Message)}[/]");
+            return;
+        }
+        catch (TimeoutException ex)
+        {
+            console.MarkupLine($"[red]{Markup.Escape(ex.Message)}[/]");
+            return;
+        }
+    }
+
+    var orchestrator = serviceProvider.GetRequiredService<CalendarOrchestrator>();
 
     await orchestrator.ExecuteAsync(request, cts.Token);
 }

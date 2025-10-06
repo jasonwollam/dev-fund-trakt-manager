@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using DevFund.TraktManager.Infrastructure.Http;
+using DevFund.TraktManager.Application.Contracts;
+using DevFund.TraktManager.Application.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevFund.TraktManager.Infrastructure.Tests;
@@ -35,8 +37,9 @@ public class TraktCalendarClientTests
             })
         });
 
-        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
-        var sut = new TraktCalendarClient(client, NullLogger<TraktCalendarClient>.Instance);
+    using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
+    var tokenStore = new StubTokenStore("token-value");
+    var sut = new TraktCalendarClient(client, tokenStore, NullLogger<TraktCalendarClient>.Instance);
 
         var entries = await sut.GetMyShowsAsync(new DateOnly(2024, 01, 01), 7);
 
@@ -49,7 +52,19 @@ public class TraktCalendarClientTests
     {
         var handler = new StubHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.Unauthorized));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
-        var sut = new TraktCalendarClient(client, NullLogger<TraktCalendarClient>.Instance);
+        var tokenStore = new StubTokenStore("token-value");
+        var sut = new TraktCalendarClient(client, tokenStore, NullLogger<TraktCalendarClient>.Instance);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.GetMyShowsAsync(new DateOnly(2024, 01, 01), 7));
+    }
+
+    [Fact]
+    public async Task GetMyShowsAsync_Throws_WhenTokenMissing()
+    {
+        var handler = new StubHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
+        var tokenStore = new StubTokenStore(null);
+        var sut = new TraktCalendarClient(client, tokenStore, NullLogger<TraktCalendarClient>.Instance);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sut.GetMyShowsAsync(new DateOnly(2024, 01, 01), 7));
     }
@@ -66,6 +81,32 @@ public class TraktCalendarClientTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             return Task.FromResult(_response);
+        }
+    }
+
+    private sealed class StubTokenStore : ITraktAccessTokenStore
+    {
+        private readonly string? _token;
+
+        public StubTokenStore(string? token)
+        {
+            _token = token;
+        }
+
+        public ValueTask<DeviceTokenResponse?> GetTokenAsync(CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(_token))
+            {
+                return ValueTask.FromResult<DeviceTokenResponse?>(null);
+            }
+
+            var deviceToken = new DeviceTokenResponse(_token!, "Bearer", TimeSpan.Zero, string.Empty, null);
+            return ValueTask.FromResult<DeviceTokenResponse?>(deviceToken);
+        }
+
+        public ValueTask SetTokenAsync(DeviceTokenResponse token, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
         }
     }
 }

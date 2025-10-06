@@ -15,7 +15,7 @@ Refer to [`.github/instructions/architecture.instructions.md`](.github/instructi
 ## Prerequisites
 
 - [.NET SDK 8.0](https://dotnet.microsoft.com/en-us/download)
-- Trakt API client credentials configured in `appsettings.json` before running the CLI.
+- Trakt API client credentials configured in `appsettings.json` (`Trakt:ClientId` and `Trakt:ClientSecret`). The CLI guides you through the Trakt device authorization flow at runtime and uses any configured access token as a starting point.
 
 ## Getting started
 
@@ -29,7 +29,7 @@ dotnet test
 ## Running the CLI presenter
 
 1. Update `src/DevFund.TraktManager.Presentation.Cli/appsettings.json` with valid Trakt credentials.
-2. Execute the CLI with optional filters:
+2. Execute the CLI with optional filters. When no valid access token is present, you'll receive a pairing code and verification URL to authorize the device before the calendar is fetched:
 
 ```bash
 cd /home/konsorted/dev/dev-fund-trakt-manager

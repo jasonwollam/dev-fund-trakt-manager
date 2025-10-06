@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using DevFund.TraktManager.Application.Abstractions;
 using DevFund.TraktManager.Domain.Entities;
@@ -14,11 +15,13 @@ internal sealed class TraktCalendarClient : ITraktCalendarClient
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpClient _httpClient;
+    private readonly ITraktAccessTokenStore _tokenStore;
     private readonly ILogger<TraktCalendarClient> _logger;
 
-    public TraktCalendarClient(HttpClient httpClient, ILogger<TraktCalendarClient>? logger = null)
+    public TraktCalendarClient(HttpClient httpClient, ITraktAccessTokenStore tokenStore, ILogger<TraktCalendarClient>? logger = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _tokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
         _logger = logger ?? NullLogger<TraktCalendarClient>.Instance;
     }
 
@@ -31,6 +34,14 @@ internal sealed class TraktCalendarClient : ITraktCalendarClient
 
         var requestUri = $"calendars/my/shows/{startDate:yyyy-MM-dd}/{days}";
         using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+
+        var token = await _tokenStore.GetTokenAsync(cancellationToken).ConfigureAwait(false);
+        if (token is null || string.IsNullOrWhiteSpace(token.AccessToken))
+        {
+            throw new InvalidOperationException("No Trakt access token is available. Run device authentication before requesting the calendar.");
+        }
+
+        request.Headers.Authorization = new AuthenticationHeaderValue(token.TokenType, token.AccessToken);
 
         using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
