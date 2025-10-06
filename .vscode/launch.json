@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch DevFund CLI",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "dotnet build",
+      "program": "${workspaceFolder}/src/DevFund.TraktManager.Presentation.Cli/bin/Debug/net8.0/DevFund.TraktManager.Presentation.Cli.dll",
+      "args": [
+        "--start=2024-01-01",
+        "--days=7"
+      ],
+      "cwd": "${workspaceFolder}/src/DevFund.TraktManager.Presentation.Cli",
+      "console": "integratedTerminal",
+      "stopAtEntry": false,
+      "justMyCode": false,
+      "logging": {
+        "moduleLoad": true
+      }
+    },
+    {
+      "name": "Attach to DevFund CLI",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "justMyCode": false,
+      "requireExactSource": false
+    }
+  ]
+}
