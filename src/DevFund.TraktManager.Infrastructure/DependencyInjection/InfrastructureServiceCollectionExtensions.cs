@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Net.Http.Headers;
 using DevFund.TraktManager.Application.Abstractions;
+using DevFund.TraktManager.Infrastructure.Auth;
 using DevFund.TraktManager.Infrastructure.Http;
 using DevFund.TraktManager.Infrastructure.Options;
 using Microsoft.Extensions.Configuration;
@@ -17,6 +18,7 @@ public static class InfrastructureServiceCollectionExtensions
             .Bind(configuration.GetSection(TraktOptions.SectionName));
 
         services.AddSingleton<ITraktAccessTokenStore, InMemoryTraktAccessTokenStore>();
+        services.AddScoped<IDeviceAuthenticationService, TraktDeviceAuthenticationService>();
 
         services.AddHttpClient<ITraktDeviceAuthClient, TraktDeviceAuthClient>((serviceProvider, client) =>
         {

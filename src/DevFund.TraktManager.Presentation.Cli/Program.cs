@@ -3,7 +3,6 @@ using System.Linq;
 using DevFund.TraktManager.Application.Abstractions;
 using DevFund.TraktManager.Application.Contracts;
 using DevFund.TraktManager.Application.DependencyInjection;
-using DevFund.TraktManager.Application.Services;
 using DevFund.TraktManager.Infrastructure.DependencyInjection;
 using DevFund.TraktManager.Presentation.Cli;
 using DevFund.TraktManager.Presentation.Cli.Presentation;
@@ -212,7 +211,7 @@ static async Task<bool> EnsureAuthenticatedAsync(IServiceProvider serviceProvide
         return true;
     }
 
-    var authService = serviceProvider.GetRequiredService<DeviceAuthenticationService>();
+    var authService = serviceProvider.GetRequiredService<IDeviceAuthenticationService>();
     console.MarkupLine("[yellow]Authorize this device with your Trakt account to continue.[/]");
 
     DeviceCodeResponse deviceCode;

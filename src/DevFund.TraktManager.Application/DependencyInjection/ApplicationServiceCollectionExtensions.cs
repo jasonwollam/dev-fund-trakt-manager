@@ -9,7 +9,6 @@ public static class ApplicationServiceCollectionExtensions
     {
         services.AddScoped<CalendarService>();
         services.AddScoped<CalendarOrchestrator>();
-        services.AddScoped<DeviceAuthenticationService>();
         services.AddScoped<WatchlistService>();
         services.AddScoped<WatchlistOrchestrator>();
         return services;

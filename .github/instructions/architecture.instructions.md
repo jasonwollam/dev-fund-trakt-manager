@@ -15,6 +15,12 @@ applyTo: '**'
 - Domain never references other projects; keep new concepts here first.
 - Application exposes abstractions for infrastructure/presenter implementations; add new interfaces here when introducing additional persistence providers or front-ends.
 
+## Authentication & authorization guardrails
+- All authentication/authorization workflows (device code polling, token storage, refresh logic) live in the infrastructure project. The application layer describes the ports (`IDeviceAuthenticationService`, `ITraktDeviceAuthClient`, `ITraktAccessTokenStore`) but never owns behaviour.
+- Presentation layers resolve `IDeviceAuthenticationService` from DI; do not instantiate infrastructure types directly or reimplement the device flow outside the infrastructure boundary.
+- When integrating new auth providers or stores, add the interface to `Application.Abstractions`, implement it under `Infrastructure`, and register it in `InfrastructureServiceCollectionExtensions` alongside the existing Trakt adapters.
+- Credentials, tokens, and other secrets must stay out of domain/application code and static configuration embedded in source. Keep configuration in `appsettings` or external secure stores and wire them through infrastructure options.
+
 ## Testing strategy
 - `tests/DevFund.TraktManager.Domain.Tests` exercise entity/value-object invariants.
 - `tests/DevFund.TraktManager.Application.Tests` cover use-case coordination and presenter interactions via fakes.
