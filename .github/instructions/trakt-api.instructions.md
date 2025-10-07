@@ -1,51 +1,79 @@
 ---
 applyTo: '**/*'
 ---
-# Trakt API reference usage
-- Canonical REST definitions live in `spec/trakt.apib` (API Blueprint format) with `HOST: https://api.trakt.tv`. Use this file as the single source of truth for endpoints, parameters, payloads, and example responses.
-- Default requests are JSON. Include headers `Content-Type: application/json`, `trakt-api-key: <client_id>`, `trakt-api-version: 2`, and your app `User-Agent`. OAuth-protected routes add `Authorization: Bearer <access_token>`.
-- Rate limiting and VIP behaviours are documented near the top of the spec (look for the `Rate Limiting`, `VIP Methods`, and `VIP Enhanced` sections). Surface these when proposing bulk operations.
-- Pagination, extended info flags, and filter parameters are shared across many endpoints—reference the dedicated sections before inventing bespoke query strings.
-- Standard media payloads (`movie`, `show`, `season`, `episode`, `person`, `user`) are defined in the `Standard Media Objects` section. Reuse these shapes when modelling new features.
+# Trakt API integration guide
 
-## Endpoint catalog (from `spec/trakt.apib`)
-- **Authentication – OAuth**: Authorize (`/oauth/authorize{?response_type,client_id,redirect_uri,state}`), Get Token (`/oauth/token`), Refresh Token (`/oauth/token`), Revoke Token (`/oauth/revoke`).
-- **Authentication – Devices**: Device Code (`/oauth/device/code`), Get Token (`/oauth/device/token`).
-- **Calendars**: My Shows (`/calendars/my/shows/{start_date}/{days}`), My New Shows (`/calendars/my/shows/new/{start_date}/{days}`), My Season Premieres (`/calendars/my/shows/premieres/{start_date}/{days}`), My Finales (`/calendars/my/shows/finales/{start_date}/{days}`), My Movies (`/calendars/my/movies/{start_date}/{days}`), My Streaming (`/calendars/my/streaming/{start_date}/{days}`), My DVD (`/calendars/my/dvd/{start_date}/{days}`), All Shows (`/calendars/all/shows/{start_date}/{days}`), All New Shows (`/calendars/all/shows/new/{start_date}/{days}`), All Season Premieres (`/calendars/all/shows/premieres/{start_date}/{days}`), All Finales (`/calendars/all/shows/finales/{start_date}/{days}`), All Movies (`/calendars/all/movies/{start_date}/{days}`), All Streaming (`/calendars/all/streaming/{start_date}/{days}`), All DVD (`/calendars/all/dvd/{start_date}/{days}`).
-- **Checkin**: Checkin (`/checkin`).
-- **Certifications**: List (`/certifications/{type}`).
-- **Comments**: Comments (`/comments`), Comment (`/comments/{id}`), Replies (`/comments/{id}/replies`), Item (`/comments/{id}/item`), Likes (`/comments/{id}/likes`), Like (`/comments/{id}/like`), Trending (`/comments/trending/{comment_type}/{type}{?include_replies}`), Recent (`/comments/recent/{comment_type}/{type}{?include_replies}`), Updates (`/comments/updates/{comment_type}/{type}{?include_replies}`).
-- **Countries**: List (`/countries/{type}`).
-- **Genres**: List (`/genres/{type}`).
-- **Languages**: List (`/languages/{type}`).
-- **Lists**: Trending (`/lists/trending/{type}`), Popular (`/lists/popular/{type}`), List (`/lists/{id}`), List Likes (`/lists/{id}/likes`), List Like (`/lists/{id}/like`), List Items (`/lists/{id}/items/{type}/{sort_by}/{sort_how}`), List Comments (`/lists/{id}/comments/{sort}`).
-- **Movies**: Trending (`/movies/trending`), Popular (`/movies/popular`), Favorited (`/movies/favorited/{period}`), Played (`/movies/played/{period}`), Watched (`/movies/watched/{period}`), Collected (`/movies/collected/{period}`), Anticipated (`/movies/anticipated`), Box Office (`/movies/boxoffice`), Updates (`/movies/updates/{start_date}`), Updated IDs (`/movies/updates/id/{start_date}`), Summary (`/movies/{id}`), Aliases (`/movies/{id}/aliases`), Releases (`/movies/{id}/releases/{country}`), Translations (`/movies/{id}/translations/{language}`), Comments (`/movies/{id}/comments/{sort}`), Lists (`/movies/{id}/lists/{type}/{sort}`), People (`/movies/{id}/people`), Ratings (`/movies/{id}/ratings`), Related (`/movies/{id}/related`), Stats (`/movies/{id}/stats`), Studios (`/movies/{id}/studios`), Watching (`/movies/{id}/watching`), Videos (`/movies/{id}/videos`), Refresh (`/movies/{id}/refresh`).
-- **Networks**: List (`/networks`).
-- **Notes**: Notes (`/notes`), Note (`/notes/{id}`), Item (`/notes/{id}/item`).
-- **People**: Updates (`/people/updates/{start_date}`), Updated IDs (`/people/updates/id/{start_date}`), Summary (`/people/{id}`), Movies (`/people/{id}/movies`), Shows (`/people/{id}/shows`), Lists (`/people/{id}/lists/{type}/{sort}`), Refresh (`/people/{id}/refresh`).
-- **Recommendations**: Movies (`/recommendations/movies{?ignore_collected,ignore_watchlisted}`), Hide Movie (`/recommendations/movies/{id}`), Shows (`/recommendations/shows{?ignore_collected,ignore_watchlisted}`), Hide Show (`/recommendations/shows/{id}`).
-- **Scrobble**: Start (`/scrobble/start`), Pause (`/scrobble/pause`), Stop (`/scrobble/stop`).
-- **Search**: Text Query (`/search/{type}{?query}`), ID Lookup (`/search/{id_type}/{id}{?type}`).
-- **Shows**: Trending (`/shows/trending`), Popular (`/shows/popular`), Favorited (`/shows/favorited/{period}`), Played (`/shows/played/{period}`), Watched (`/shows/watched/{period}`), Collected (`/shows/collected/{period}`), Anticipated (`/shows/anticipated`), Updates (`/shows/updates/{start_date}`), Updated IDs (`/shows/updates/id/{start_date}`), Summary (`/shows/{id}`), Aliases (`/shows/{id}/aliases`), Certifications (`/shows/{id}/certifications`), Translations (`/shows/{id}/translations/{language}`), Comments (`/shows/{id}/comments/{sort}`), Lists (`/shows/{id}/lists/{type}/{sort}`), Collection Progress (`/shows/{id}/progress/collection{?hidden,specials,count_specials,last_activity}`), Watched Progress (`/shows/{id}/progress/watched{?hidden,specials,count_specials,last_activity}`), Reset Watched Progress (`/shows/{id}/progress/watched/reset`), People (`/shows/{id}/people`), Ratings (`/shows/{id}/ratings`), Related (`/shows/{id}/related`), Stats (`/shows/{id}/stats`), Studios (`/shows/{id}/studios`), Watching (`/shows/{id}/watching`), Next Episode (`/shows/{id}/next_episode`), Last Episode (`/shows/{id}/last_episode`), Videos (`/shows/{id}/videos`), Refresh (`/shows/{id}/refresh`).
-- **Seasons**: Summary (`/shows/{id}/seasons`), Season (`/shows/{id}/seasons/{season}/info`), Episodes (`/shows/{id}/seasons/{season}{?translations}`), Translations (`/shows/{id}/seasons/{season}/translations/{language}`), Comments (`/shows/{id}/seasons/{season}/comments/{sort}`), Lists (`/shows/{id}/seasons/{season}/lists/{type}/{sort}`), People (`/shows/{id}/seasons/{season}/people`), Ratings (`/shows/{id}/seasons/{season}/ratings`), Stats (`/shows/{id}/seasons/{season}/stats`), Watching (`/shows/{id}/seasons/{season}/watching`), Videos (`/shows/{id}/seasons/{season}/videos`).
-- **Episodes**: Summary (`/shows/{id}/seasons/{season}/episodes/{episode}`), Translations (`/shows/{id}/seasons/{season}/episodes/{episode}/translations/{language}`), Comments (`/shows/{id}/seasons/{season}/episodes/{episode}/comments/{sort}`), Lists (`/shows/{id}/seasons/{season}/episodes/{episode}/lists/{type}/{sort}`), People (`/shows/{id}/seasons/{season}/episodes/{episode}/people`), Ratings (`/shows/{id}/seasons/{season}/episodes/{episode}/ratings`), Stats (`/shows/{id}/seasons/{season}/episodes/{episode}/stats`), Watching (`/shows/{id}/seasons/{season}/episodes/{episode}/watching`), Videos (`/shows/{id}/seasons/{season}/episodes/{episode}/videos`).
-- **Sync**: Last Activities (`/sync/last_activities`), Playback (`/sync/playback/{type}{?start_at,end_at}`), Remove Playback (`/sync/playback/{id}`), Get Collection (`/sync/collection/{type}`), Add to Collection (`/sync/collection`), Remove from Collection (`/sync/collection/remove`), Get Watched (`/sync/watched/{type}`), Get History (`/sync/history/{type}/{id}{?start_at,end_at}`), Add to History (`/sync/history`), Remove from History (`/sync/history/remove`), Get Ratings (`/sync/ratings/{type}/{rating}`), Add Ratings (`/sync/ratings`), Remove Ratings (`/sync/ratings/remove`), Get Watchlist (`/sync/watchlist/{type}/{sort_by}/{sort_how}`), Update Watchlist (`/sync/watchlist`), Add to Watchlist (`/sync/watchlist`), Remove from Watchlist (`/sync/watchlist/remove`), Reorder Watchlist (`/sync/watchlist/reorder`), Update Watchlist Item (`/sync/watchlist/{list_item_id}`), Get Favorites (`/sync/favorites/{type}/{sort_by}/{sort_how}`), Update Favorites (`/sync/favorites`), Add to Favorites (`/sync/favorites`), Remove from Favorites (`/sync/favorites/remove`), Reorder Favorites (`/sync/favorites/reorder`), Update Favorite Item (`/sync/favorites/{list_item_id}`).
-- **Users**: Settings (`/users/settings`), Following Requests (`/users/requests/following`), Follower Requests (`/users/requests`), Approve or Deny Follower Requests (`/users/requests/{id}`), Saved Filters (`/users/saved_filters/{section}`), Hidden Items (`/users/hidden/{section}{?type}`), Add Hidden Items (`/users/hidden/{section}`), Remove Hidden Items (`/users/hidden/{section}/remove`), Profile (`/users/{id}`), Likes (`/users/{id}/likes/{type}`), Collection (`/users/{id}/collection/{type}`), Comments (`/users/{id}/comments/{comment_type}/{type}{?include_replies}`), Notes (`/users/{id}/notes/{type}`), Lists (`/users/{id}/lists`), Reorder Lists (`/users/{id}/lists/reorder`), Collaborations (`/users/{id}/lists/collaborations`), List (`/users/{id}/lists/{list_id}`), List Likes (`/users/{id}/lists/{list_id}/likes`), List Like (`/users/{id}/lists/{list_id}/like`), List Items (`/users/{id}/lists/{list_id}/items/{type}/{sort_by}/{sort_how}`), Add List Items (`/users/{id}/lists/{list_id}/items`), Remove List Items (`/users/{id}/lists/{list_id}/items/remove`), Reorder List Items (`/users/{id}/lists/{list_id}/items/reorder`), Update List Item (`/users/{id}/lists/{list_id}/items/{list_item_id}`), List Comments (`/users/{id}/lists/{list_id}/comments/{sort}`), Follow (`/users/{id}/follow`), Followers (`/users/{id}/followers`), Following (`/users/{id}/following`), Friends (`/users/{id}/friends`), History (`/users/{id}/history/{type}/{item_id}{?start_at,end_at}`), Ratings (`/users/{id}/ratings/{type}/{rating}`), Watchlist (`/users/{id}/watchlist/{type}/{sort_by}/{sort_how}`), Watchlist Comments (`/users/{id}/watchlist/comments/{sort}`), Favorites (`/users/{id}/favorites/{type}/{sort_by}/{sort_how}`), Favorites Comments (`/users/{id}/favorites/comments/{sort}`), Watching (`/users/{id}/watching`), Watched (`/users/{id}/watched/{type}`), Stats (`/users/{id}/stats`).
+This document explains how to navigate Trakt’s API specification, design features around it, and keep our integration current. Treat it as the authoritative companion to `spec/trakt.apib` when building or reviewing infrastructure code.
+
+## Canonical sources
+- `spec/trakt.apib` (API Blueprint). Always diff against this file before changing HTTP contracts.
+- Live reference: https://trakt.docs.apiary.io/api-description-document (mirrors the API Blueprint and exposes sample payloads).
+- Automation: `scripts/update-api-spec.sh` should fetch the Apiary document and highlight changes in `spec/trakt.apib`.
+
+## Reading the spec effectively
+- **Headers** – Every request must include `Content-Type: application/json`, `trakt-api-key`, `trakt-api-version: 2`, and a descriptive `User-Agent`. Authenticated calls add `Authorization: Bearer <access_token>`.
+- **Authentication flows** – Device flow is documented under *Authentication → Devices*. Standard OAuth lives under *Authentication → OAuth*. Confirm required scopes before invoking protected routes.
+- **Rate limiting & VIP** – Inspect the `Rate Limiting`, `VIP Methods`, and `VIP Enhanced` sections in the spec. Surface limits in docs or CLI responses when a workflow risks throttling.
+- **Pagination & filtering** – Shared query parameters (`page`, `limit`, `extended`, `filters`) are defined once in the spec; reuse them verbatim. Never invent custom filters.
+- **Extended info** – Many endpoints support `extended=full`, `full,images`, etc. Add flags only when the application needs the extra fields and ensure DTOs are updated accordingly.
+- **Standard objects** – Media payload definitions (`movie`, `show`, `season`, `episode`, `person`, `user`) appear in *Standard Media Objects*. Map these directly to DTOs/value objects to avoid drift.
+- **Error handling** – HTTP status codes and error payload examples live in the *Errors* section. Propagate meaningful messages to the application layer and surface remediation tips in presenters.
+
+## Feature slices ↔ spec sections
+Use these vertical slices to plan work. Each slice touches all layers (Domain → Application → Infrastructure → Presentation) plus their sibling tests. The “Spec focus” column points to the areas of `spec/trakt.apib` to study first.
+
+| Slice | Spec focus | Representative endpoints | Implementation notes |
+| --- | --- | --- | --- |
+| Device authentication & token lifecycle | Authentication → Devices / OAuth | `/oauth/device/code`, `/oauth/device/token`, `/oauth/token`, `/oauth/revoke` | Handles polling, token storage, and refresh workflows. Presenter must guide the user through verification UI. |
+| Calendar consumption | Calendars | `/calendars/{scope}/{type}/{start_date}/{days}` variants | Date math, optional extended info, and timezone handling; results drive CLI calendar views. |
+| Watchlist management | Sync → Watchlist, Users → Watchlist | `/sync/watchlist/*`, `/users/{id}/watchlist/*` | Supports CRUD plus ordering. Requires batch payloads and idempotent retries. |
+| Collection & playback sync | Sync → Collection / Playback | `/sync/collection/*`, `/sync/playback/*` | Import/export scenarios with large payloads; mind rate limits and delta updates. |
+| History & analytics | Sync → History, Users → History / Stats, Shows → Progress | `/sync/history/*`, `/users/{id}/history/*`, `/users/{id}/stats`, `/shows/{id}/progress/*` | Covers pagination-heavy reads and progress aggregation. |
+| Lists & saved filters | Users → Lists / Saved Filters, Lists | `/users/{id}/lists/*`, `/lists/{id}/*`, `/users/saved_filters/{section}` | Exposes both user-owned lists and public list metadata; ensure CLI shows sorting options. |
+| Recommendations & discovery | Movies → Trending/Popular, Shows → Trending/Popular, Recommendations | `/movies|shows/trending`, `/movies|shows/popular`, `/recommendations/*` | Extended query support (ignore collected/watchlisted). Ideal for CLI discovery modes. |
+| Social interactions | Comments, Sync → Ratings, Users → Likes | `/comments/*`, `/sync/ratings/*`, `/users/{id}/likes/*` | Posting requires authenticated context and user feedback when moderation errors occur. |
+| People & metadata enrichment | People, Shows/Movies → People, Metadata endpoints (Genres, Certifications) | `/people/{id}/*`, `/shows|movies/{id}/people`, `/genres/*`, `/certifications/*` | Enriches detail views with credits, genres, and certifications. |
+
+## Endpoint map by category
+The table below links high-level feature areas to their primary endpoints. Use it to verify coverage and to locate sample payloads inside `spec/trakt.apib` or the Apiary mirror.
+
+| Category | Endpoint families | Notes |
+| --- | --- | --- |
+| Authentication | `/oauth/authorize`, `/oauth/token`, `/oauth/device/*`, `/oauth/revoke` | Includes both standard OAuth and device code flow. Confirm scopes and token lifetimes. |
+| Calendars | `/calendars/{scope}/{type}/{start}/{days}` | Supports personal (`my`) and global (`all`) scopes for shows, movies, premieres, etc. |
+| Check-in & scrobbling | `/checkin`, `/scrobble/start|pause|stop` | Mutate hydrated playback state; ensure only one active check-in per account. |
+| Collections & sync | `/sync/collection/*`, `/sync/playback/*`, `/sync/last_activities` | Keep local caches aligned with Trakt; respect `last_activities` timestamps. |
+| History & watched data | `/sync/history/*`, `/users/{id}/history/*`, `/shows/{id}/progress/*` | Provide date filters and pagination. Useful for analytics slices. |
+| Lists & curation | `/users/{id}/lists/*`, `/lists/{id}/*`, `/users/saved_filters/{section}` | Handles personal lists, collaborations, saved filters, and comments. |
+| Movies & shows metadata | `/movies/*`, `/shows/*`, `/shows/{id}/seasons`, `/shows/{id}/episodes` | Retrieve summary, aliases, releases, stats, related items, and people. |
+| People & companies | `/people/{id}/*`, `/networks`, `/genres/*`, `/certifications/*`, `/countries/*`, `/languages/*` | Static vocab endpoints for enrichment and localization. |
+| Recommendations & discovery | `/movies|shows/trending`, `/movies|shows/popular`, `/recommendations/*` | Input parameters control filtering (e.g., ignore collected). |
+| Search & lookup | `/search/{type}`, `/search/{id_type}/{id}` | Text search as well as ID translation (IMDB, TMDB, etc.). |
+| Social interactions | `/comments/*`, `/users/{id}/likes/*`, `/users/{id}/notes/*` | Includes threaded comments, likes, and notes. |
+| User profile & settings | `/users/settings`, `/users/{id}` plus followers/following/friends | Combine with lists and history for dashboard features. |
+| Watchlists & favorites | `/sync/watchlist/*`, `/sync/favorites/*`, `/users/{id}/watchlist/*`, `/users/{id}/favorites/*` | Provide add/remove/reorder operations and comment feeds. |
 
 ## Authentication workflows
 
-### Device flow (`Authentication - Devices`)
+### Device flow (limited-input clients)
+Mirror the steps laid out under *Authentication → Devices* in `spec/trakt.apib`:
 
-Follow this sequence when building limited-input experiences (media centers, TVs, CLI tools), mirroring the `spec/trakt.apib` steps:
+1. **Generate codes** – `POST /oauth/device/code` with the client ID (and optional secret). Persist `device_code`, `user_code`, `verification_url`, `expires_in`, and `interval`.
+2. **Prompt the user** – Display the `user_code` and `verification_url`. Keep the prompt visible until the flow succeeds or expires.
+3. **Poll for authorization** – `POST /oauth/device/token` with the device code at the provided `interval`. Stop when you receive a token or when `expires_in` elapses.
+4. **Handle polling errors** – Respect the `error` string: `authorization_pending`, `slow_down` (add 5 seconds), `access_denied`, `expired_token`.
+5. **Capture success** – On HTTP 200, persist `access_token`, `refresh_token`, and `expires_in`. Subsequent requests must include the bearer token alongside the standard headers.
 
-1. **Generate codes** — `POST /oauth/device/code` with your `client_id` and optional `client_secret`. Persist the full response (`device_code`, `user_code`, `verification_url`, `expires_in`, `interval`). Never reuse expired codes.
-2. **Prompt the user** — render `user_code` and direct them to `verification_url` on another device. Keep the prompt visible until you receive a terminal response or the request expires.
-3. **Poll for authorization** — `POST /oauth/device/token` with `code` = `device_code`, `client_id`, and `client_secret`. Poll exactly at the provided `interval` (seconds) and stop after `expires_in` elapses.
-4. **Handle polling errors** — inspect the `error` string in non-200 responses:
-	- `authorization_pending`: continue polling at the same interval.
-	- `slow_down`: increase the polling delay by 5 seconds before retrying.
-	- `access_denied`: abort the flow and inform the user authorization was declined.
-	- `expired_token`: stop polling, discard codes, and restart at step 1.
-5. **Success response** — on HTTP 200, capture the returned `access_token`, `refresh_token`, and `expires_in` just like standard OAuth. Persist tokens securely and use the refresh flow (`/oauth/token` with `grant_type=refresh_token`) before the access token expires.
+### Standard OAuth flow
+For applications that can open a browser:
 
-All subsequent authenticated calls from the device must include the `Authorization: Bearer <access_token>` header plus the standard Trakt headers listed above.
+1. Direct users to `/oauth/authorize` with `response_type=code`, the client ID, redirect URI, and optional state.
+2. Exchange the authorization code via `POST /oauth/token` (`grant_type=authorization_code`).
+3. Refresh tokens using `POST /oauth/token` (`grant_type=refresh_token`) before expiry.
+4. Revoke refresh tokens using `POST /oauth/revoke` when users sign out.
+
+## Implementation & testing reminders
+- Follow the clean architecture rules in `.github/instructions/architecture.instructions.md`; infrastructure is the only layer that talks to Trakt directly.
+- Expand the matching test project whenever you add a class to Domain/Application/Infrastructure/Presentation. The slice table above hints at the tests each workflow needs.
+- When adding CLI features, document new arguments in `README.md` and keep the prompt in `.github/prompts/trakt-api-implementation.prompt.md` in sync.
+- Monitor specification changes regularly via `scripts/update-api-spec.sh` and capture deltas in commit messages or changelogs.
