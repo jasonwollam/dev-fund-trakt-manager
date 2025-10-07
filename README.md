@@ -44,6 +44,7 @@ The CLI supports multiple modes selected through the `--mode` flag (defaults to 
 | --- | --- | --- |
 | `calendar` | Shows upcoming episodes for your account. | `--start=yyyy-MM-dd`, `--days=N` |
 | `watchlist` | Lists the items in your Trakt watchlist. | `--watchlist-type=all\|movies\|shows\|seasons\|episodes`, `--watchlist-sort=rank\|added\|...`, `--watchlist-order=asc\|desc` |
+| `lists` | Explores personal/public lists, list items, and saved filters. | `--lists-kind=personal\|liked\|likes\|official\|saved`, `--lists-user=<slug\|me>`, `--lists-slug=<slug>`, `--lists-item-type=all\|movies\|shows\|seasons\|episodes\|people`, `--lists-include-items`, `--lists-page=N`, `--lists-limit=N`, `--lists-section=movies\|shows\|calendars\|search` |
 
 Example watchlist command:
 
@@ -56,6 +57,54 @@ dotnet run --project src/DevFund.TraktManager.Presentation.Cli -- \
 ```
 
 All watchlist options map directly to Trakt's [`/sync/watchlist/{type}/{sort_by}/{sort_how}`](spec/trakt.apib) endpoint, so refer to the API blueprint for the full list of supported values.
+
+### Lists mode usage
+
+Use lists mode to audit your own lists, inspect a friend's curated list, or review saved filters that Trakt applies across discovery surfaces. The CLI accepts the following switches:
+
+- `--lists-kind` *(default: `personal`)* — chooses the upstream endpoint.
+  - `personal` → `/users/{user}/lists`
+  - `liked` → `/users/{user}/lists/liked`
+  - `likes` → `/users/{user}/likes/lists`
+  - `official` → `/lists/official`
+  - `saved` → `/users/saved_filters/{section}`
+- `--lists-user=<slug|me>` — targets a specific user slug. Use `me` (default) for the authenticated account.
+- `--lists-slug=<slug>` — when provided, fetches items for the specified list via `/users/{user}/lists/{slug}/items/{type}`.
+- `--lists-item-type=all|movies|shows|seasons|episodes|people` *(default: `all`)* — narrows list items when `--lists-slug` is supplied.
+- `--lists-include-items` — while browsing summaries (`personal`, `liked`, `official`), also load each list's items.
+- `--lists-page` / `--lists-limit` — forwards pagination parameters to Trakt endpoints that support them.
+- `--lists-section=movies|shows|calendars|search` — required when `--lists-kind=saved` to choose the saved filter section. Defaults to `movies` when omitted.
+
+Example: enumerate your own personal lists with item previews.
+
+```bash
+dotnet run --project src/DevFund.TraktManager.Presentation.Cli -- \
+	--mode=lists \
+	--lists-kind=personal \
+	--lists-user=me \
+	--lists-include-items
+```
+
+Example: inspect a friend's "watch-next" list and show only the TV episodes it contains.
+
+```bash
+dotnet run --project src/DevFund.TraktManager.Presentation.Cli -- \
+	--mode=lists \
+	--lists-user=friend_slug \
+	--lists-slug=watch-next \
+	--lists-item-type=episodes
+```
+
+Example: review your saved filters for the Trakt discovery search surface.
+
+```bash
+dotnet run --project src/DevFund.TraktManager.Presentation.Cli -- \
+	--mode=lists \
+	--lists-kind=saved \
+	--lists-section=search
+```
+
+The CLI maps these switches directly to the endpoints documented in [`spec/trakt.apib`](spec/trakt.apib). Consult the blueprint for full parameter lists and edge cases (e.g., VIP-only filters, pagination ceilings).
 
 ### Sample Trakt watchlist request
 

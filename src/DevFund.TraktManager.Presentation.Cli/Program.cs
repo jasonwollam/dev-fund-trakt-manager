@@ -3,6 +3,7 @@ using System.Linq;
 using DevFund.TraktManager.Application.Abstractions;
 using DevFund.TraktManager.Application.Contracts;
 using DevFund.TraktManager.Application.DependencyInjection;
+using DevFund.TraktManager.Domain.ValueObjects;
 using DevFund.TraktManager.Infrastructure.DependencyInjection;
 using DevFund.TraktManager.Presentation.Cli;
 using DevFund.TraktManager.Presentation.Cli.Presentation;
@@ -36,8 +37,10 @@ builder.Services
     .AddSingleton<IAnsiConsole>(_ => AnsiConsole.Console)
     .AddSingleton<ICalendarPresenter, ConsoleCalendarPresenter>()
     .AddSingleton<IWatchlistPresenter, ConsoleWatchlistPresenter>()
+    .AddSingleton<IListsPresenter, ConsoleListsPresenter>()
     .AddScoped<ICliCommandStrategy, CalendarCliCommandStrategy>()
-    .AddScoped<ICliCommandStrategy, WatchlistCliCommandStrategy>();
+    .AddScoped<ICliCommandStrategy, WatchlistCliCommandStrategy>()
+    .AddScoped<ICliCommandStrategy, ListsCliCommandStrategy>();
 
 using var host = builder.Build();
 using var cts = new CancellationTokenSource();
@@ -95,6 +98,14 @@ static CliOptions ParseCliOptions(string[] arguments)
     var watchlistFilter = WatchlistItemFilter.All;
     var watchlistSort = WatchlistSortField.Rank;
     var watchlistOrder = WatchlistSortOrder.Asc;
+    var listsKind = ListCollectionKind.Personal;
+    string? listsUser = null;
+    string? listsSlug = null;
+    var listsItemType = ListItemsType.All;
+    var listsIncludeItems = false;
+    int? listsPage = null;
+    int? listsLimit = null;
+    var listsSection = SavedFilterSection.Movies;
 
     foreach (var argument in arguments)
     {
@@ -105,7 +116,8 @@ static CliOptions ParseCliOptions(string[] arguments)
             {
                 "calendar" => CliMode.Calendar,
                 "watchlist" => CliMode.Watchlist,
-                _ => throw new ArgumentException($"Unsupported mode '{value}'. Use 'calendar' or 'watchlist'.")
+                "lists" => CliMode.Lists,
+                _ => throw new ArgumentException($"Unsupported mode '{value}'. Use 'calendar', 'watchlist', or 'lists'.")
             };
         }
         else if (argument.StartsWith("--start=", StringComparison.OrdinalIgnoreCase))
@@ -143,11 +155,71 @@ static CliOptions ParseCliOptions(string[] arguments)
             var value = argument.Substring("--watchlist-order=".Length);
             watchlistOrder = ParseWatchlistSortOrder(value);
         }
+        else if (argument.StartsWith("--lists-kind=", StringComparison.OrdinalIgnoreCase))
+        {
+            var value = argument.Substring("--lists-kind=".Length);
+            listsKind = ParseListCollectionKind(value);
+        }
+        else if (argument.StartsWith("--lists-user=", StringComparison.OrdinalIgnoreCase))
+        {
+            listsUser = argument.Substring("--lists-user=".Length);
+        }
+        else if (argument.StartsWith("--lists-slug=", StringComparison.OrdinalIgnoreCase))
+        {
+            listsSlug = argument.Substring("--lists-slug=".Length);
+        }
+        else if (argument.StartsWith("--lists-item-type=", StringComparison.OrdinalIgnoreCase))
+        {
+            var value = argument.Substring("--lists-item-type=".Length);
+            listsItemType = ParseListItemsType(value);
+        }
+        else if (argument.StartsWith("--lists-include-items", StringComparison.OrdinalIgnoreCase))
+        {
+            var parts = argument.Split('=', 2);
+            if (parts.Length == 1)
+            {
+                listsIncludeItems = true;
+            }
+            else if (bool.TryParse(parts[1], out var parsedInclude))
+            {
+                listsIncludeItems = parsedInclude;
+            }
+            else
+            {
+                throw new ArgumentException($"Invalid --lists-include-items value '{parts[1]}'. Use true or false.");
+            }
+        }
+        else if (argument.StartsWith("--lists-page=", StringComparison.OrdinalIgnoreCase))
+        {
+            var value = argument.Substring("--lists-page=".Length);
+            if (!int.TryParse(value, out var parsed) || parsed <= 0)
+            {
+                throw new ArgumentException($"Invalid --lists-page value '{value}'. Provide a positive integer.");
+            }
+
+            listsPage = parsed;
+        }
+        else if (argument.StartsWith("--lists-limit=", StringComparison.OrdinalIgnoreCase))
+        {
+            var value = argument.Substring("--lists-limit=".Length);
+            if (!int.TryParse(value, out var parsed) || parsed <= 0)
+            {
+                throw new ArgumentException($"Invalid --lists-limit value '{value}'. Provide a positive integer.");
+            }
+
+            listsLimit = parsed;
+        }
+        else if (argument.StartsWith("--lists-section=", StringComparison.OrdinalIgnoreCase))
+        {
+            var value = argument.Substring("--lists-section=".Length);
+            listsSection = ParseSavedFilterSection(value);
+        }
     }
 
     var calendarOptions = new CalendarOptions(startDate ?? DateOnly.FromDateTime(DateTime.UtcNow), days ?? 7);
     var watchlistOptions = new WatchlistOptions(watchlistFilter, watchlistSort, watchlistOrder);
-    return new CliOptions(mode, calendarOptions, watchlistOptions);
+    var listsOptions = new ListsOptions(listsKind, listsUser, listsSlug, listsItemType, listsIncludeItems, listsPage, listsLimit, listsSection);
+    return new CliOptions(mode, calendarOptions, watchlistOptions, listsOptions);
 }
 
 static WatchlistItemFilter ParseWatchlistItemFilter(string value)
@@ -198,6 +270,45 @@ static WatchlistSortOrder ParseWatchlistSortOrder(string value)
         "asc" => WatchlistSortOrder.Asc,
         "desc" => WatchlistSortOrder.Desc,
         _ => throw new ArgumentException($"Unsupported watchlist order '{value}'.")
+    };
+}
+
+static ListCollectionKind ParseListCollectionKind(string value)
+{
+    return value.Trim().ToLowerInvariant() switch
+    {
+        "personal" => ListCollectionKind.Personal,
+        "liked" => ListCollectionKind.Liked,
+        "likes" => ListCollectionKind.Likes,
+        "official" => ListCollectionKind.Official,
+        "saved" => ListCollectionKind.Saved,
+        _ => throw new ArgumentException($"Unsupported lists kind '{value}'.")
+    };
+}
+
+static ListItemsType ParseListItemsType(string value)
+{
+    return value.Trim().ToLowerInvariant() switch
+    {
+        "all" => ListItemsType.All,
+        "movies" or "movie" => ListItemsType.Movies,
+        "shows" or "show" => ListItemsType.Shows,
+        "seasons" or "season" => ListItemsType.Seasons,
+        "episodes" or "episode" => ListItemsType.Episodes,
+        "people" or "person" => ListItemsType.People,
+        _ => throw new ArgumentException($"Unsupported lists item type '{value}'.")
+    };
+}
+
+static SavedFilterSection ParseSavedFilterSection(string value)
+{
+    return value.Trim().ToLowerInvariant() switch
+    {
+        "movies" => SavedFilterSection.Movies,
+        "shows" => SavedFilterSection.Shows,
+        "calendars" => SavedFilterSection.Calendars,
+        "search" => SavedFilterSection.Search,
+        _ => throw new ArgumentException($"Unsupported saved filter section '{value}'.")
     };
 }
 

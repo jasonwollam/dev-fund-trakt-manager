@@ -11,6 +11,8 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<CalendarOrchestrator>();
         services.AddScoped<WatchlistService>();
         services.AddScoped<WatchlistOrchestrator>();
+        services.AddScoped<ListsService>();
+        services.AddScoped<ListsOrchestrator>();
         return services;
     }
 }

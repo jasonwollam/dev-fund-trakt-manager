@@ -23,6 +23,14 @@
   ```bash
   dotnet run --project src/DevFund.TraktManager.Presentation.Cli -- --start=2024-01-01 --days=7
   ```
+- Switch to watchlist mode when auditing the authenticated user's watchlist:
+  ```bash
+  dotnet run --project src/DevFund.TraktManager.Presentation.Cli -- --mode=watchlist --watchlist-type=shows --watchlist-sort=added --watchlist-order=desc
+  ```
+- Explore personal/public lists, list items, or saved filters via lists mode:
+  ```bash
+  dotnet run --project src/DevFund.TraktManager.Presentation.Cli -- --mode=lists --lists-kind=personal --lists-user=me --lists-include-items
+  ```
 - New packages go through `dotnet add <project> package <name>`; never edit `*.csproj` manually when a CLI command exists.
 
 ## Conventions & patterns
