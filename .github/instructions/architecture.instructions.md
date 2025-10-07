@@ -34,4 +34,5 @@ applyTo: '**'
 
 ## Collaboration pointers
 - Follow `.github/copilot-instructions.md` for day-to-day workflows and build commands.
+- Consult `.github/instructions/trakt-slice-catalog.md` when planning or updating Trakt features; it tracks slice status and detailed checklists.
 - Update this file after structural refactors so future contributors (or AI agents) stay synchronized.

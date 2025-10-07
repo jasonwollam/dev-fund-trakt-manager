@@ -12,7 +12,7 @@ Use this checklist whenever you add or extend functionality that talks to `trakt
 - Project overview and usage: [`README.md`](../../README.md)
 
 ## Workflow overview
-1. **Scope & plan** – Pick the Trakt capability you’re implementing, study the spec, and decide which layers need updates.
+1. **Scope & plan** – Select a slice from [`trakt-slice-catalog.md`](../instructions/trakt-slice-catalog.md), study the spec, and decide which layers need updates.
 2. **Model the domain** – Introduce or adjust entities/value objects so the domain expresses the new behaviour without infrastructure concerns.
 3. **Shape the application layer** – Add contracts, DTOs, and ports that describe the use case and how presenters consume it.
 4. **Implement infrastructure** – Build HTTP clients, request/response mappers, DI wiring, and auth handling that satisfy the ports.
@@ -25,7 +25,7 @@ Treat these steps as incremental checkpoints; complete each before moving outwar
 ## Detailed guidance
 
 ### 1. Scope & plan
-- Inspect the target endpoint(s) in `spec/trakt.apib` and the Apiary mirror.
+- Review the slice entry in the catalog, then inspect the target endpoint(s) in `spec/trakt.apib` and the Apiary mirror.
 - Capture assumptions, required auth scopes, rate limits, and pagination rules.
 - If the API contract changed, update the spec monitoring script and note the change in documentation.
 

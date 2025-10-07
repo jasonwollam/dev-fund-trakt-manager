@@ -10,6 +10,16 @@ This document explains how to navigate Trakt’s API specification, design featu
 - Live reference: https://trakt.docs.apiary.io/api-description-document (mirrors the API Blueprint and exposes sample payloads).
 - Automation: `scripts/update-api-spec.sh` should fetch the Apiary document and highlight changes in `spec/trakt.apib`.
 
+### Keeping the blueprint current
+
+- Run `./scripts/update-api-spec.sh` in check mode (default) to compare the local blueprint with Apiary. The script exits with code `1` when differences are found and prints a unified diff.
+- Apply updates by rerunning with `--apply`:
+	```bash
+	./scripts/update-api-spec.sh --apply
+	```
+- Use `--force` alongside `--apply` only if Apiary temporarily returns an empty payload and you explicitly want to overwrite the local file.
+- Override the source endpoint with `--url <uri>` if Apiary publishes a new location.
+
 ## Reading the spec effectively
 - **Headers** – Every request must include `Content-Type: application/json`, `trakt-api-key`, `trakt-api-version: 2`, and a descriptive `User-Agent`. Authenticated calls add `Authorization: Bearer <access_token>`.
 - **Authentication flows** – Device flow is documented under *Authentication → Devices*. Standard OAuth lives under *Authentication → OAuth*. Confirm required scopes before invoking protected routes.
@@ -20,7 +30,7 @@ This document explains how to navigate Trakt’s API specification, design featu
 - **Error handling** – HTTP status codes and error payload examples live in the *Errors* section. Propagate meaningful messages to the application layer and surface remediation tips in presenters.
 
 ## Feature slices ↔ spec sections
-Use these vertical slices to plan work. Each slice touches all layers (Domain → Application → Infrastructure → Presentation) plus their sibling tests. The “Spec focus” column points to the areas of `spec/trakt.apib` to study first.
+Use these vertical slices to plan work. Each slice touches all layers (Domain → Application → Infrastructure → Presentation) plus their sibling tests. The “Spec focus” column points to the areas of `spec/trakt.apib` to study first. See [`trakt-slice-catalog.md`](./trakt-slice-catalog.md) for status, assumptions, and per-slice checklists.
 
 | Slice | Spec focus | Representative endpoints | Implementation notes |
 | --- | --- | --- | --- |

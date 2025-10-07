@@ -3,6 +3,7 @@
 ## Quick orientation
 - Start with `.github/instructions/architecture.instructions.md` for the full clean-architecture map (projects, dependencies, tests).
 - `.github/instructions/trakt-api.instructions.md` mirrors `spec/trakt.apib` and is the canonical contract for infrastructure code hitting Trakt.
+- `.github/instructions/trakt-slice-catalog.md` documents vertical slices of Trakt functionality and their implementation status.
 
 ## Solution layout (see architecture doc for detail)
 - `src/DevFund.TraktManager.Domain` — entities/value objects (`Show`, `Episode`, `CalendarEntry`, `TraktIds`).
@@ -31,6 +32,7 @@
 - Prefer constructor injection, cancellation tokens, and async flows. Avoid static state.
 
 ## When expanding features
+- Choose a slice from the catalog before diving in so you cover every layer and test set intentionally.
 - Start with Domain abstractions, follow with Application ports/contracts, then implement Infrastructure or additional Presenters.
 - Add/extend the sibling test project the moment you create a new class in any layer.
 - Update this document plus the architecture instructions whenever the structure or workflows change so downstream agents stay in sync.
